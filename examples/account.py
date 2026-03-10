@@ -1,6 +1,6 @@
 from yoomoney import Client
 
-token = "YOUR_TOKEN"
+token = "3E9CADDEE9865AF6E957A6E4388E5AC35AC2777164F1261034938CF1CD4B0780"
 
 client = Client(token)
 

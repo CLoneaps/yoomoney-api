@@ -37,15 +37,22 @@ Features
 +=============================+===============================================================+
 | `Access token`_             | Obtain an OAuth access token.                                 |
 +-----------------------------+---------------------------------------------------------------+
-| `Account information`_      | Retrieve the current status of the user account.              |
+| `Account information`_      | Retrieve the current status of the user account.             |
 +-----------------------------+---------------------------------------------------------------+
 | `Operation history`_        | View the full or partial history of operations (paginated,    |
 |                             | reverse-chronological order).                                 |
 +-----------------------------+---------------------------------------------------------------+
 | `Operation details`_        | Get detailed information about a single operation.            |
 +-----------------------------+---------------------------------------------------------------+
-| `Quickpay forms`_           | Generate a payment form that can be embedded into any website |
-|                             | or blog.                                                      |
+| `Quickpay forms`_           | Generate a payment form for any website or blog.              |
++-----------------------------+---------------------------------------------------------------+
+| `Payment checker`_          | Poll for incoming payments by label (sync & async).           |
++-----------------------------+---------------------------------------------------------------+
+| `History cache`_            | Cache operation history locally (SQLite or JSON).             |
++-----------------------------+---------------------------------------------------------------+
+| `Webhook notifications`_    | Receive payment notifications via Flask or FastAPI.           |
++-----------------------------+---------------------------------------------------------------+
+| `CLI`_                      | Command-line tool for balance, history, and payment watching. |
 +-----------------------------+---------------------------------------------------------------+
 
 Installation
@@ -62,6 +69,14 @@ Or with `uv <https://docs.astral.sh/uv/>`_:
 .. code-block:: shell
 
    uv add yoomoney
+
+**With optional webhook support:**
+
+.. code-block:: shell
+
+   pip install yoomoney[flask]    # Flask webhook
+   pip install yoomoney[fastapi]  # FastAPI webhook
+   pip install yoomoney[all]      # both
 
 **From source**:
 
@@ -85,11 +100,9 @@ First of all you need to receive an access token.
 1. Log in to your YooMoney wallet. If you do not have one,
    `create it <https://yoomoney.ru/reg>`_.
 2. Go to the `App registration <https://yoomoney.ru/myservices/new>`_ page.
-3. Set the application parameters. Save **CLIENT_ID** and **REDIRECT_URI** for
-   the next steps.
+3. Set the application parameters. Save **CLIENT_ID** and **REDIRECT_URI**.
 4. Click **Confirm**.
-5. Replace the placeholders below with your real credentials, choose the
-   required scopes, and run the code.
+5. Replace the placeholders below with your real credentials and run the code.
 6. Follow the on-screen instructions.
 
 .. code-block:: python
@@ -110,12 +123,8 @@ First of all you need to receive an access token.
        ],
    )
 
-You are done with the most difficult part!
-
 Account information
 -------------------
-
-Replace ``YOUR_TOKEN`` and run:
 
 .. code-block:: python
 
@@ -125,95 +134,25 @@ Replace ``YOUR_TOKEN`` and run:
    user = client.account_info()
 
    print("Account number:", user.account)
-   print("Account balance:", user.balance)
-   print("Currency (ISO 4217):", user.currency)
-   print("Account status:", user.account_status)
-   print("Account type:", user.account_type)
-
-   print("Extended balance information:")
-   for key, value in vars(user.balance_details).items():
-       print(f"  {key}: {value}")
-
-   print("Linked bank cards:")
-   if user.cards_linked:
-       for card in user.cards_linked:
-           print(f"  {card.pan_fragment} — {card.type}")
-   else:
-       print("  No cards linked")
-
-.. code-block:: text
-
-   Account number: 410019014512803
-   Account balance: 999999999999.99
-   Currency (ISO 4217): 643
-   Account status: identified
-   Account type: personal
-   Extended balance information:
-     total: 999999999999.99
-     available: 999999999999.99
-     deposition_pending: None
-     blocked: None
-     debt: None
-     hold: None
-   Linked bank cards:
-     No cards linked
+   print("Balance:", user.balance, user.currency)
+   print("Status:", user.account_status)
+   print("Type:", user.account_type)
 
 Operation history
 -----------------
-
-Replace ``YOUR_TOKEN`` and run:
 
 .. code-block:: python
 
    from yoomoney import Client
 
    client = Client("YOUR_TOKEN")
-   history = client.operation_history()
-
-   print("List of operations:")
-   print("Next page starts with:", history.next_record)
+   history = client.operation_history(records=10)
 
    for op in history.operations:
-       print()
-       print(f"Operation: {op.operation_id}")
-       print(f"  Status     : {op.status}")
-       print(f"  Datetime   : {op.datetime}")
-       print(f"  Title      : {op.title}")
-       print(f"  Pattern id : {op.pattern_id}")
-       print(f"  Direction  : {op.direction}")
-       print(f"  Amount     : {op.amount}")
-       print(f"  Label      : {op.label}")
-       print(f"  Type       : {op.type}")
-
-.. code-block:: text
-
-   List of operations:
-   Next page starts with: None
-
-   Operation: 670278348725002105
-     Status     : success
-     Datetime   : 2021-10-10 10:10:10
-     Title      : Пополнение с карты ****4487
-     Pattern id : None
-     Direction  : in
-     Amount     : 100500.0
-     Label      : 3784030974
-     Type       : deposition
-
-   Operation: 670244335488002313
-     Status     : success
-     Datetime   : 2021-10-10 10:10:10
-     Title      : Перевод от 410019014512803
-     Pattern id : p2p
-     Direction  : in
-     Amount     : 100500.0
-     Label      : 7920963969
-     Type       : incoming-transfer
+       print(f"{op.datetime}  {op.direction:>4}  {op.amount} ₽  {op.label or '—'}")
 
 Operation details
 -----------------
-
-Replace ``YOUR_TOKEN`` and ``OPERATION_ID`` (e.g. ``670244335488002312``) and run:
 
 .. code-block:: python
 
@@ -225,31 +164,6 @@ Replace ``YOUR_TOKEN`` and ``OPERATION_ID`` (e.g. ``670244335488002312``) and ru
    for key, value in vars(details).items():
        if not key.startswith("_"):
            print(f"{key:20s} : {str(value).replace(chr(10), ' ')}")
-
-.. code-block:: text
-
-   operation_id         : 670244335488002312
-   status               : success
-   pattern_id           : p2p
-   direction            : in
-   amount               : 100500.0
-   amount_due           : None
-   fee                  : None
-   datetime             : 2021-10-10 10:10:10
-   title                : Перевод от 410019014512803
-   sender               : 410019014512803
-   recipient            : None
-   recipient_type       : None
-   message              : Justtext
-   comment              : None
-   codepro              : False
-   protection_code      : None
-   expires              : None
-   answer_datetime      : None
-   label                : 7920963969
-   details              : Justtext
-   type                 : incoming-transfer
-   digital_goods        : None
 
 Quickpay forms
 --------------
@@ -265,25 +179,198 @@ Quickpay forms
        paymentType="SB",
        sum=150,
    )
-
    print(quickpay.base_url)
-   print(quickpay.redirected_url)
+
+Payment checker
+---------------
+
+``PaymentChecker`` polls the operation history and fires a callback as soon as
+an incoming payment with the expected label (and optionally amount) arrives.
+
+.. code-block:: python
+
+   from yoomoney import Quickpay, PaymentChecker
+   from yoomoney.operation.operation import Operation
+
+   TOKEN    = "YOUR_TOKEN"
+   RECEIVER = "YOUR_WALLET"
+
+   # 1. Generate a unique label for this order
+   label = PaymentChecker.make_label("order")
+
+   # 2. Build a payment link
+   quickpay = Quickpay(
+       receiver=RECEIVER,
+       quickpay_form="shop",
+       targets="Order payment",
+       paymentType="AC",
+       sum=299.0,
+       label=label,
+   )
+   print("Payment URL:", quickpay.base_url)
+
+   # 3. Wait up to 10 minutes for the payment
+   def on_paid(op: Operation) -> None:
+       print(f"✓ Received {op.amount} ₽  label={op.label}")
+
+   checker = PaymentChecker(token=TOKEN, interval=5)
+   paid = checker.watch(label=label, callback=on_paid, amount=299.0, timeout=600)
+
+Async version:
+
+.. code-block:: python
+
+   import asyncio
+   from yoomoney import PaymentChecker
+   from yoomoney.operation.operation import Operation
+
+   async def main() -> None:
+       checker = PaymentChecker(token="YOUR_TOKEN", interval=5)
+
+       async def on_paid(op: Operation) -> None:
+           print(f"✓ Received {op.amount} ₽")
+
+       await checker.watch_async(label="order_123", callback=on_paid, timeout=300)
+
+   asyncio.run(main())
+
+History cache
+-------------
+
+Cache operation history locally to reduce the number of API calls.
+Two backends: ``SQLiteCache`` (recommended for production) and ``JSONCache`` (scripts).
+
+.. code-block:: python
+
+   from datetime import timedelta
+   from yoomoney import Client, SQLiteCache
+
+   client = Client("YOUR_TOKEN")
+   cache  = SQLiteCache("payments.db")
+
+   if cache.is_fresh(max_age=timedelta(minutes=5)):
+       operations = cache.load()              # served from disk
+   else:
+       history = client.operation_history(records=50)
+       cache.save(history.operations)         # persist to disk
+       operations = history.operations
+
+   # Filter locally — zero API calls
+   label_ops = cache.load(label="order_123")
+   print(f"Operations for order_123: {len(label_ops)}")
+
+Webhook notifications
+---------------------
+
+YooMoney can POST a notification to your server when a payment arrives.
+
+**Flask:**
+
+.. code-block:: shell
+
+   pip install yoomoney[flask]
+
+.. code-block:: python
+
+   from flask import Flask
+   from yoomoney.webhook import flask_webhook, Notification
+
+   app    = Flask(__name__)
+   SECRET = "YOUR_NOTIFICATION_SECRET"
+
+   def on_payment(n: Notification) -> None:
+       print(f"✓ {n.amount} ₽  op={n.operation_id}  label={n.label}")
+
+   @app.route("/", methods=["POST"])
+   def notify():
+       return flask_webhook(secret=SECRET, on_payment=on_payment)
+
+   if __name__ == "__main__":
+       app.run(port=5000)
+
+**FastAPI:**
+
+.. code-block:: shell
+
+   pip install yoomoney[fastapi]
+
+.. code-block:: python
+
+   from fastapi import FastAPI, Request
+   from yoomoney.webhook import fastapi_webhook, Notification
+
+   app    = FastAPI()
+   SECRET = "YOUR_NOTIFICATION_SECRET"
+
+   def on_payment(n: Notification) -> None:
+       print(f"✓ {n.amount} ₽  op={n.operation_id}  label={n.label}")
+
+   @app.post("/")
+   async def notify(request: Request):
+       return await fastapi_webhook(request=request, secret=SECRET, on_payment=on_payment)
+
+The ``Notification`` model validates the SHA-1 signature automatically.
+Pass ``verify=False`` to skip signature checking during local development.
+
+**Setting up notifications in YooMoney**
+
+1. Go to `yoomoney.ru/transfer/myservices/http-notification <https://yoomoney.ru/transfer/myservices/http-notification>`_.
+2. Enter your server URL in the **"Куда отправлять (URL сайта)"** field.
+3. Copy the value from **"Секрет для проверки подлинности"** — use it as ``SECRET`` in your code.
+4. Check **"Отправлять HTTP-уведомления"** and save.
+
+**Testing without a real payment**
+
+For local development you can expose your server via
+`ngrok <https://ngrok.com>`_ and use the built-in test button:
+
+.. code-block:: shell
+
+   # 1. Install and start your webhook server
+   pip install flask yoomoney[flask]
+   python examples/webhook_server.py
+
+   # 2. In a second terminal — expose it to the internet
+   ngrok http 5000
+
+   # 3. Copy the public URL from ngrok (e.g. https://abc123.ngrok-free.app)
+   #    Paste it into the YooMoney notification settings page
+   #    Then click "Протестировать" — you should see the payment in your terminal
+
+Expected terminal output after clicking **"Протестировать"**:
 
 .. code-block:: text
 
-   https://yoomoney.ru/quickpay/confirm.xml?receiver=410019014512803&quickpay-form=shop&targets=Sponsor%20this%20project&paymentType=SB&sum=150
-   https://yoomoney.ru/transfer/quickpay?requestId=343532353937313933395f66326561316639656131626539326632616434376662373665613831373636393537613336383639
+   ✓ Платёж получен!
+     Сумма:        200.39 ₽
+     Label:
+     Operation ID: test-notification
+     Отправитель:  41001000040
+
+CLI
+---
+
+After installation a ``yoomoney`` command becomes available.
+Set the token once via environment variable:
+
+.. code-block:: shell
+
+   export YOOMONEY_TOKEN="YOUR_TOKEN"   # Linux / macOS
+   set    YOOMONEY_TOKEN=YOUR_TOKEN     # Windows
+
+.. code-block:: shell
+
+   yoomoney account                              # account info
+   yoomoney balance                              # balance only
+   yoomoney history --records 10                 # last 10 operations
+   yoomoney history --label order_42             # filter by label
+   yoomoney details --id 670244335488002312      # operation details
+   yoomoney watch --label order_42 --amount 500  # wait for payment
+   yoomoney make-label --prefix order            # generate unique label
 
 Async client
 ============
 
-An asynchronous client (``AsyncClient``) exposes the same API as the synchronous
-``Client``, but every method is a coroutine. Use it as an ``async with`` context
-manager so the underlying connection pool is closed properly.
-
-Async account information
--------------------------
-
 .. code-block:: python
 
    import asyncio
@@ -291,71 +378,12 @@ Async account information
 
    async def main():
        async with AsyncClient("YOUR_TOKEN") as client:
-           user = await client.account_info()
+           user    = await client.account_info()
+           history = await client.operation_history(records=5)
 
-           print("Account number:", user.account)
-           print("Account balance:", user.balance)
-           print("Currency (ISO 4217):", user.currency)
-           print("Account status:", user.account_status)
-           print("Account type:", user.account_type)
-
-           print("Extended balance information:")
-           for key, value in vars(user.balance_details).items():
-               print(f"  {key}: {value}")
-
-           print("Linked bank cards:")
-           if user.cards_linked:
-               for card in user.cards_linked:
-                   print(f"  {card.pan_fragment} — {card.type}")
-           else:
-               print("  No cards linked")
-
-   asyncio.run(main())
-
-Async operation history
------------------------
-
-.. code-block:: python
-
-   import asyncio
-   from yoomoney import AsyncClient
-
-   async def main():
-       async with AsyncClient("YOUR_TOKEN") as client:
-           history = await client.operation_history()
-
-           print("List of operations:")
-           print("Next page starts with:", history.next_record)
-
+           print("Balance:", user.balance)
            for op in history.operations:
-               print()
-               print(f"Operation: {op.operation_id}")
-               print(f"  Status     : {op.status}")
-               print(f"  Datetime   : {op.datetime}")
-               print(f"  Title      : {op.title}")
-               print(f"  Pattern id : {op.pattern_id}")
-               print(f"  Direction  : {op.direction}")
-               print(f"  Amount     : {op.amount}")
-               print(f"  Label      : {op.label}")
-               print(f"  Type       : {op.type}")
-
-   asyncio.run(main())
-
-Async operation details
------------------------
-
-.. code-block:: python
-
-   import asyncio
-   from yoomoney import AsyncClient
-
-   async def main():
-       async with AsyncClient("YOUR_TOKEN") as client:
-           details = await client.operation_details(operation_id="OPERATION_ID")
-
-           for key, value in vars(details).items():
-               if not key.startswith("_"):
-                   print(f"{key:20s} : {str(value).replace(chr(10), ' ')}")
+               print(f"  {op.datetime}  {op.amount} ₽")
 
    asyncio.run(main())
 
