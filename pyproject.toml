@@ -138,6 +138,9 @@ ignore = [
 "yoomoney/exceptions.py" = [
     "N818",  # exception names are public API – no "Error" suffix by design
 ]
+"yoomoney/cli.py" = [
+    "T201",  # print() is intentional in CLI
+]
 "yoomoney/authorize/authorize.py" = [
     "T201",  # print() is intentional – interactive OAuth flow outputs to stdout
 ]
