@@ -48,6 +48,15 @@ YooMoney API
 +-------------------------------------+-----------------------------------------------------------+
 | `Формы быстрой оплаты (Quickpay)`_ | Создание платёжной формы для встраивания на сайт или блог. |
 +-------------------------------------+-----------------------------------------------------------+
+| `Проверка платежей`_                | Polling входящих платежей по label (sync и async).         |
++-------------------------------------+-----------------------------------------------------------+
+| `Кэш истории`_                      | Локальное кэширование истории операций (SQLite или JSON).  |
++-------------------------------------+-----------------------------------------------------------+
+| `Webhook-уведомления`_              | Приём уведомлений о платежах через Flask или FastAPI.      |
++-------------------------------------+-----------------------------------------------------------+
+| `CLI`_                              | Консольный инструмент для баланса, истории и ожидания      |
+|                                     | платежей.                                                  |
++-------------------------------------+-----------------------------------------------------------+
 
 Установка
 =========
@@ -63,6 +72,14 @@ YooMoney API
 .. code-block:: shell
 
    uv add yoomoney
+
+**С поддержкой webhook:**
+
+.. code-block:: shell
+
+   pip install yoomoney[flask]    # Flask webhook
+   pip install yoomoney[fastapi]  # FastAPI webhook
+   pip install yoomoney[all]      # оба
 
 **Из исходников**:
 
@@ -86,11 +103,9 @@ YooMoney API
 1. Войдите в свой кошелёк YooMoney. Если у вас его нет —
    `создайте <https://yoomoney.ru/reg>`_.
 2. Перейдите на страницу `регистрации приложения <https://yoomoney.ru/myservices/new>`_.
-3. Задайте параметры приложения. Сохраните **CLIENT_ID** и **REDIRECT_URI** —
-   они понадобятся далее.
+3. Задайте параметры приложения. Сохраните **CLIENT_ID** и **REDIRECT_URI**.
 4. Нажмите **Подтвердить**.
-5. Вставьте свои реальные данные вместо заглушек в коде ниже, выберите нужные
-   права (scopes) и запустите скрипт.
+5. Вставьте свои реальные данные в код ниже и запустите скрипт.
 6. Следуйте инструкциям на экране.
 
 .. code-block:: python
@@ -116,8 +131,6 @@ YooMoney API
 Информация об аккаунте
 ----------------------
 
-Замените ``YOUR_TOKEN`` на свой токен и запустите:
-
 .. code-block:: python
 
    from yoomoney import Client
@@ -126,95 +139,25 @@ YooMoney API
    user = client.account_info()
 
    print("Номер счёта:", user.account)
-   print("Баланс:", user.balance)
-   print("Валюта (ISO 4217):", user.currency)
-   print("Статус аккаунта:", user.account_status)
-   print("Тип аккаунта:", user.account_type)
-
-   print("Расширенная информация о балансе:")
-   for key, value in vars(user.balance_details).items():
-       print(f"  {key}: {value}")
-
-   print("Привязанные банковские карты:")
-   if user.cards_linked:
-       for card in user.cards_linked:
-           print(f"  {card.pan_fragment} — {card.type}")
-   else:
-       print("  Нет привязанных карт")
-
-.. code-block:: text
-
-   Номер счёта: 410019014512803
-   Баланс: 999999999999.99
-   Валюта (ISO 4217): 643
-   Статус аккаунта: identified
-   Тип аккаунта: personal
-   Расширенная информация о балансе:
-     total: 999999999999.99
-     available: 999999999999.99
-     deposition_pending: None
-     blocked: None
-     debt: None
-     hold: None
-   Привязанные банковские карты:
-     Нет привязанных карт
+   print("Баланс:", user.balance, user.currency)
+   print("Статус:", user.account_status)
+   print("Тип:", user.account_type)
 
 История операций
 ----------------
-
-Замените ``YOUR_TOKEN`` и запустите:
 
 .. code-block:: python
 
    from yoomoney import Client
 
    client = Client("YOUR_TOKEN")
-   history = client.operation_history()
-
-   print("Список операций:")
-   print("Следующая страница начинается с:", history.next_record)
+   history = client.operation_history(records=10)
 
    for op in history.operations:
-       print()
-       print(f"Операция: {op.operation_id}")
-       print(f"  Статус     : {op.status}")
-       print(f"  Дата       : {op.datetime}")
-       print(f"  Название   : {op.title}")
-       print(f"  Pattern id : {op.pattern_id}")
-       print(f"  Направление: {op.direction}")
-       print(f"  Сумма      : {op.amount}")
-       print(f"  Метка      : {op.label}")
-       print(f"  Тип        : {op.type}")
-
-.. code-block:: text
-
-   Список операций:
-   Следующая страница начинается с: None
-
-   Операция: 670278348725002105
-     Статус     : success
-     Дата       : 2021-10-10 10:10:10
-     Название   : Пополнение с карты ****4487
-     Pattern id : None
-     Направление: in
-     Сумма      : 100500.0
-     Метка      : 3784030974
-     Тип        : deposition
-
-   Операция: 670244335488002313
-     Статус     : success
-     Дата       : 2021-10-10 10:10:10
-     Название   : Перевод от 410019014512803
-     Pattern id : p2p
-     Направление: in
-     Сумма      : 100500.0
-     Метка      : 7920963969
-     Тип        : incoming-transfer
+       print(f"{op.datetime}  {op.direction:>4}  {op.amount} ₽  {op.label or '—'}")
 
 Детали операции
 ---------------
-
-Замените ``YOUR_TOKEN`` и ``OPERATION_ID`` (например ``670244335488002312``) и запустите:
 
 .. code-block:: python
 
@@ -226,31 +169,6 @@ YooMoney API
    for key, value in vars(details).items():
        if not key.startswith("_"):
            print(f"{key:20s} : {str(value).replace(chr(10), ' ')}")
-
-.. code-block:: text
-
-   operation_id         : 670244335488002312
-   status               : success
-   pattern_id           : p2p
-   direction            : in
-   amount               : 100500.0
-   amount_due           : None
-   fee                  : None
-   datetime             : 2021-10-10 10:10:10
-   title                : Перевод от 410019014512803
-   sender               : 410019014512803
-   recipient            : None
-   recipient_type       : None
-   message              : Justtext
-   comment              : None
-   codepro              : False
-   protection_code      : None
-   expires              : None
-   answer_datetime      : None
-   label                : 7920963969
-   details              : Justtext
-   type                 : incoming-transfer
-   digital_goods        : None
 
 Формы быстрой оплаты (Quickpay)
 --------------------------------
@@ -266,25 +184,198 @@ YooMoney API
        paymentType="SB",
        sum=150,
    )
-
    print(quickpay.base_url)
-   print(quickpay.redirected_url)
+
+Проверка платежей
+-----------------
+
+``PaymentChecker`` опрашивает историю операций и вызывает колбэк сразу после
+поступления входящего платежа с нужным label (и опционально суммой).
+
+.. code-block:: python
+
+   from yoomoney import Quickpay, PaymentChecker
+   from yoomoney.operation.operation import Operation
+
+   TOKEN    = "YOUR_TOKEN"
+   RECEIVER = "YOUR_WALLET"
+
+   # 1. Генерируем уникальный label для заказа
+   label = PaymentChecker.make_label("order")
+
+   # 2. Создаём ссылку на оплату
+   quickpay = Quickpay(
+       receiver=RECEIVER,
+       quickpay_form="shop",
+       targets="Оплата заказа",
+       paymentType="AC",
+       sum=299.0,
+       label=label,
+   )
+   print("Ссылка на оплату:", quickpay.base_url)
+
+   # 3. Ждём платёж до 10 минут
+   def on_paid(op: Operation) -> None:
+       print(f"✓ Получено {op.amount} ₽  label={op.label}")
+
+   checker = PaymentChecker(token=TOKEN, interval=5)
+   paid = checker.watch(label=label, callback=on_paid, amount=299.0, timeout=600)
+
+Асинхронная версия:
+
+.. code-block:: python
+
+   import asyncio
+   from yoomoney import PaymentChecker
+   from yoomoney.operation.operation import Operation
+
+   async def main() -> None:
+       checker = PaymentChecker(token="YOUR_TOKEN", interval=5)
+
+       async def on_paid(op: Operation) -> None:
+           print(f"✓ Получено {op.amount} ₽")
+
+       await checker.watch_async(label="order_123", callback=on_paid, timeout=300)
+
+   asyncio.run(main())
+
+Кэш истории
+-----------
+
+Кэширование истории операций локально — чтобы не дёргать API при каждом запросе.
+Два бэкенда: ``SQLiteCache`` (рекомендуется) и ``JSONCache`` (для скриптов).
+
+.. code-block:: python
+
+   from datetime import timedelta
+   from yoomoney import Client, SQLiteCache
+
+   client = Client("YOUR_TOKEN")
+   cache  = SQLiteCache("payments.db")
+
+   if cache.is_fresh(max_age=timedelta(minutes=5)):
+       operations = cache.load()              # из диска
+   else:
+       history = client.operation_history(records=50)
+       cache.save(history.operations)         # сохранить на диск
+       operations = history.operations
+
+   # Фильтрация локально — без обращения к API
+   label_ops = cache.load(label="order_123")
+   print(f"Операций для order_123: {len(label_ops)}")
+
+Webhook-уведомления
+-------------------
+
+YooMoney умеет отправлять POST-уведомление на ваш сервер при поступлении платежа.
+
+**Flask:**
+
+.. code-block:: shell
+
+   pip install yoomoney[flask]
+
+.. code-block:: python
+
+   from flask import Flask
+   from yoomoney.webhook import flask_webhook, Notification
+
+   app    = Flask(__name__)
+   SECRET = "ВАШ_СЕКРЕТ"   # указать в YooMoney → HTTP-уведомления
+
+   def on_payment(n: Notification) -> None:
+       print(f"✓ {n.amount} ₽  op={n.operation_id}  label={n.label}")
+
+   @app.route("/", methods=["POST"])
+   def notify():
+       return flask_webhook(secret=SECRET, on_payment=on_payment)
+
+   if __name__ == "__main__":
+       app.run(port=5000)
+
+**FastAPI:**
+
+.. code-block:: shell
+
+   pip install yoomoney[fastapi]
+
+.. code-block:: python
+
+   from fastapi import FastAPI, Request
+   from yoomoney.webhook import fastapi_webhook, Notification
+
+   app    = FastAPI()
+   SECRET = "ВАШ_СЕКРЕТ"
+
+   def on_payment(n: Notification) -> None:
+       print(f"✓ {n.amount} ₽  op={n.operation_id}  label={n.label}")
+
+   @app.post("/")
+   async def notify(request: Request):
+       return await fastapi_webhook(request=request, secret=SECRET, on_payment=on_payment)
+
+Модель ``Notification`` автоматически проверяет SHA-1 подпись.
+Передайте ``verify=False`` чтобы отключить проверку во время локальной разработки.
+
+**Настройка уведомлений в YooMoney**
+
+1. Перейдите на страницу `yoomoney.ru/transfer/myservices/http-notification <https://yoomoney.ru/transfer/myservices/http-notification>`_.
+2. В поле **"Куда отправлять (URL сайта)"** укажите URL вашего сервера.
+3. Скопируйте значение из **"Секрет для проверки подлинности"** — используйте его как ``SECRET`` в коде.
+4. Поставьте галочку **"Отправлять HTTP-уведомления"** и сохраните.
+
+**Тестирование без реального платежа**
+
+Для локальной разработки удобно пробросить сервер через
+`ngrok <https://ngrok.com>`_ и использовать встроенную кнопку тестирования:
+
+.. code-block:: shell
+
+   # 1. Установить и запустить сервер
+   pip install flask yoomoney[flask]
+   python examples/webhook_server.py
+
+   # 2. В другом терминале — пробросить наружу
+   ngrok http 5000
+
+   # 3. Скопировать публичный URL из ngrok (например https://abc123.ngrok-free.app)
+   #    Вставить в настройки уведомлений YooMoney
+   #    Нажать "Протестировать" — в терминале появится платёж
+
+Ожидаемый вывод в терминале после нажатия **"Протестировать"**:
 
 .. code-block:: text
 
-   https://yoomoney.ru/quickpay/confirm.xml?receiver=410019014512803&quickpay-form=shop&targets=Sponsor%20this%20project&paymentType=SB&sum=150
-   https://yoomoney.ru/transfer/quickpay?requestId=343532353937313933395f66326561316639656131626539326632616434376662373665613831373636393537613336383639
+   ✓ Платёж получен!
+     Сумма:        200.39 ₽
+     Label:
+     Operation ID: test-notification
+     Отправитель:  41001000040
+
+CLI
+---
+
+После установки в терминале появляется команда ``yoomoney``.
+Токен удобно задать один раз через переменную окружения:
+
+.. code-block:: shell
+
+   export YOOMONEY_TOKEN="YOUR_TOKEN"   # Linux / macOS
+   set    YOOMONEY_TOKEN=YOUR_TOKEN     # Windows
+
+.. code-block:: shell
+
+   yoomoney account                              # информация об аккаунте
+   yoomoney balance                              # только баланс
+   yoomoney history --records 10                 # последние 10 операций
+   yoomoney history --label order_42             # фильтр по label
+   yoomoney details --id 670244335488002312      # детали операции
+   yoomoney watch --label order_42 --amount 500  # ждать платёж
+   yoomoney make-label --prefix order            # сгенерировать label
 
 Асинхронный клиент
 ==================
 
-Асинхронный клиент (``AsyncClient``) предоставляет тот же API, что и синхронный
-``Client``, но каждый метод является корутиной. Используйте ``async with`` для
-корректного закрытия пула соединений.
-
-Асинхронная информация об аккаунте
-----------------------------------
-
 .. code-block:: python
 
    import asyncio
@@ -292,71 +383,12 @@ YooMoney API
 
    async def main():
        async with AsyncClient("YOUR_TOKEN") as client:
-           user = await client.account_info()
+           user    = await client.account_info()
+           history = await client.operation_history(records=5)
 
-           print("Номер счёта:", user.account)
            print("Баланс:", user.balance)
-           print("Валюта (ISO 4217):", user.currency)
-           print("Статус аккаунта:", user.account_status)
-           print("Тип аккаунта:", user.account_type)
-
-           print("Расширенная информация о балансе:")
-           for key, value in vars(user.balance_details).items():
-               print(f"  {key}: {value}")
-
-           print("Привязанные банковские карты:")
-           if user.cards_linked:
-               for card in user.cards_linked:
-                   print(f"  {card.pan_fragment} — {card.type}")
-           else:
-               print("  Нет привязанных карт")
-
-   asyncio.run(main())
-
-Асинхронная история операций
-----------------------------
-
-.. code-block:: python
-
-   import asyncio
-   from yoomoney import AsyncClient
-
-   async def main():
-       async with AsyncClient("YOUR_TOKEN") as client:
-           history = await client.operation_history()
-
-           print("Список операций:")
-           print("Следующая страница начинается с:", history.next_record)
-
            for op in history.operations:
-               print()
-               print(f"Операция: {op.operation_id}")
-               print(f"  Статус     : {op.status}")
-               print(f"  Дата       : {op.datetime}")
-               print(f"  Название   : {op.title}")
-               print(f"  Pattern id : {op.pattern_id}")
-               print(f"  Направление: {op.direction}")
-               print(f"  Сумма      : {op.amount}")
-               print(f"  Метка      : {op.label}")
-               print(f"  Тип        : {op.type}")
-
-   asyncio.run(main())
-
-Асинхронные детали операции
----------------------------
-
-.. code-block:: python
-
-   import asyncio
-   from yoomoney import AsyncClient
-
-   async def main():
-       async with AsyncClient("YOUR_TOKEN") as client:
-           details = await client.operation_details(operation_id="OPERATION_ID")
-
-           for key, value in vars(details).items():
-               if not key.startswith("_"):
-                   print(f"{key:20s} : {str(value).replace(chr(10), ' ')}")
+               print(f"  {op.datetime}  {op.amount} ₽")
 
    asyncio.run(main())
 
