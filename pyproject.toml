@@ -164,3 +164,6 @@ ignore = [
 "yoomoney/checker/checker.py" = [
     "SIM102", # nested if is more readable here
 ]
+"yoomoney/cache/cache.py" = [
+    "ARG002", # max_age is part of public API
+]
