@@ -123,7 +123,7 @@ def flask_webhook(
         200 OK on success, 400 on bad signature.
     """
     try:
-        from flask import request, make_response  # type: ignore[import-untyped]
+        from flask import make_response, request  # type: ignore[import-untyped]
     except ImportError as exc:
         msg = "Flask is not installed. Run: pip install flask"
         raise ImportError(msg) from exc

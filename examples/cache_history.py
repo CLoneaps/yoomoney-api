@@ -2,7 +2,7 @@
 
 from datetime import timedelta
 
-from yoomoney import Client, SQLiteCache, JSONCache
+from yoomoney import Client, JSONCache, SQLiteCache
 
 TOKEN = "YOUR_TOKEN"
 

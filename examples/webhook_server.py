@@ -25,7 +25,7 @@ SECRET = "YOUR_NOTIFICATION_SECRET"
 
 def handle_payment(notification: Notification) -> None:
     """Called when a valid payment notification arrives."""
-    print(f"Payment received!")
+    print("Payment received!")
     print(f"  operation_id : {notification.operation_id}")
     print(f"  amount       : {notification.amount}")
     print(f"  label        : {notification.label}")
@@ -35,6 +35,7 @@ def handle_payment(notification: Notification) -> None:
 # Flask
 try:
     from flask import Flask
+
     from yoomoney.webhook import flask_webhook
 
     flask_app = Flask(__name__)
@@ -50,6 +51,7 @@ except ImportError:
 # FastAPI
 try:
     from fastapi import FastAPI, Request
+
     from yoomoney.webhook import fastapi_webhook
 
     fastapi_app = FastAPI()

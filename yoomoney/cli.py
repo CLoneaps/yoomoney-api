@@ -136,10 +136,10 @@ def cmd_watch(args: argparse.Namespace) -> None:
     print("Press Ctrl+C to cancel.")
 
     def on_payment(op: object) -> None:
-        from yoomoney.operation.operation import Operation  # noqa: PLC0415
+        from yoomoney.operation.operation import Operation
 
         if isinstance(op, Operation):
-            print(f"\n✓ Payment received!")
+            print("\n✓ Payment received!")
             print(f"  operation_id : {op.operation_id}")
             print(f"  amount       : {op.amount}")
             print(f"  label        : {op.label}")

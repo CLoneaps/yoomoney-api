@@ -8,7 +8,7 @@ RECEIVER = "YOUR_WALLET_NUMBER"
 
 
 def on_payment_received(op: Operation) -> None:
-    print(f"✓ Payment confirmed!")
+    print("✓ Payment confirmed!")
     print(f"  Amount       : {op.amount} ₽")
     print(f"  Label        : {op.label}")
     print(f"  Operation ID : {op.operation_id}")
