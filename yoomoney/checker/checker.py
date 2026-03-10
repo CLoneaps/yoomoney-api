@@ -51,7 +51,6 @@ class PaymentChecker:
         self._client = Client(token=token)
         self.interval = interval
 
-
     def check_label(self, label: str, amount: float | None = None) -> Operation | None:
         """Return the first *incoming* operation matching *label* (and optionally *amount*).
 
@@ -105,10 +104,7 @@ class PaymentChecker:
 
             time.sleep(self.interval)
 
-
-    async def check_label_async(
-        self, label: str, amount: float | None = None
-    ) -> Operation | None:
+    async def check_label_async(self, label: str, amount: float | None = None) -> Operation | None:
         """Async version of :meth:`check_label`."""
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, lambda: self.check_label(label, amount))
@@ -139,7 +135,6 @@ class PaymentChecker:
                 return False
 
             await asyncio.sleep(self.interval)
-
 
     @staticmethod
     def make_label(prefix: str = "order") -> str:

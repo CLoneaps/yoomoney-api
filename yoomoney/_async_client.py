@@ -23,7 +23,6 @@ class AsyncClient:
     ) -> None:
         self._transport = AsyncTransport(token=token or "", base_url=base_url)
 
-  
     async def __aenter__(self) -> "AsyncClient":
         return self
 
@@ -39,7 +38,6 @@ class AsyncClient:
         """Close the underlying HTTP connection pool."""
         await self._transport.close()
 
-    
     async def account_info(self) -> Account:
         data = await self._transport.request("account-info")
         return parse_account(data)

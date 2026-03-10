@@ -46,7 +46,6 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-
 class Notification(BaseModel):
     """Parsed YooMoney HTTP-notification payload.
 

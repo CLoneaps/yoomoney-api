@@ -105,12 +105,8 @@ class SQLiteCache(BaseCache):
                 )
                 """
             )
-            self._conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_label    ON operations (label)"
-            )
-            self._conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_datetime ON operations (datetime)"
-            )
+            self._conn.execute("CREATE INDEX IF NOT EXISTS idx_label    ON operations (label)")
+            self._conn.execute("CREATE INDEX IF NOT EXISTS idx_datetime ON operations (datetime)")
 
     # -- BaseCache ------------------------------------------------------------
 
@@ -173,9 +169,7 @@ class SQLiteCache(BaseCache):
         logger.info("SQLite cache cleared")
 
     def is_fresh(self, max_age: timedelta) -> bool:
-        row = self._conn.execute(
-            "SELECT MAX(cached_at) FROM operations"
-        ).fetchone()
+        row = self._conn.execute("SELECT MAX(cached_at) FROM operations").fetchone()
         if row is None or row[0] is None:
             return False
         last = datetime.strptime(row[0], _DT_FMT).replace(tzinfo=timezone.utc)

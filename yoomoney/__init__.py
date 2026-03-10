@@ -1,6 +1,6 @@
 from yoomoney._async_client import AsyncClient
-from yoomoney.cache.cache import BaseCache, JSONCache, SQLiteCache          # ← добавить
-from yoomoney.checker.checker import PaymentChecker                         # ← добавить
+from yoomoney.cache.cache import BaseCache, JSONCache, SQLiteCache  # ← добавить
+from yoomoney.checker.checker import PaymentChecker  # ← добавить
 from yoomoney.operation_details.digital_bonus import DigitalBonus
 from yoomoney.operation_details.digital_good import DigitalGood
 from yoomoney.operation_details.digital_product import DigitalProduct

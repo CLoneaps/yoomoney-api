@@ -131,12 +131,11 @@ def cmd_watch(args: argparse.Namespace) -> None:
     checker = PaymentChecker(token=token, interval=args.interval)
 
     print(
-        f"Watching for payment: label={args.label!r}, "
-        f"amount={args.amount}, timeout={args.timeout}s"
+        f"Watching for payment: label={args.label!r}, amount={args.amount}, timeout={args.timeout}s"
     )
     print("Press Ctrl+C to cancel.")
 
-    def on_payment(op: object) -> None:  
+    def on_payment(op: object) -> None:
         from yoomoney.operation.operation import Operation  # noqa: PLC0415
 
         if isinstance(op, Operation):
@@ -158,7 +157,6 @@ def cmd_watch(args: argparse.Namespace) -> None:
 def cmd_make_label(args: argparse.Namespace) -> None:
     label = PaymentChecker.make_label(prefix=args.prefix)
     print(label)
-
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -196,7 +194,9 @@ def build_parser() -> argparse.ArgumentParser:
     watch = sub.add_parser("watch", help="Poll until payment with label arrives")
     watch.add_argument("--label", required=True, help="Label to watch for")
     watch.add_argument("--amount", type=float, default=None, help="Minimum expected amount")
-    watch.add_argument("--timeout", type=float, default=300, help="Timeout in seconds (default 300)")
+    watch.add_argument(
+        "--timeout", type=float, default=300, help="Timeout in seconds (default 300)"
+    )
     watch.add_argument("--interval", type=float, default=10, help="Polling interval (default 10s)")
 
     # make-label

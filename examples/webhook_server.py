@@ -31,6 +31,7 @@ def handle_payment(notification: Notification) -> None:
     print(f"  label        : {notification.label}")
     print(f"  sender       : {notification.sender}")
 
+
 # Flask
 try:
     from flask import Flask
