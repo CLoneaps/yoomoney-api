@@ -157,3 +157,10 @@ ignore = [
 "yoomoney/_parsers.py" = [
     "A002",  # `type` param in build_history_payload() matches YooMoney API
 ]
+"yoomoney/cache/cache.py" = [
+    "E501",   # long SQL query line is fine
+    "DTZ901", # datetime.min without timezone
+]
+"yoomoney/checker/checker.py" = [
+    "SIM102", # nested if is more readable here
+]
