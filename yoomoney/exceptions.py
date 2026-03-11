@@ -69,6 +69,7 @@ class IllegalParamOperationId(YooMoneyError):
 class TechnicalError(YooMoneyError):
     message = "Technical error, try calling the operation again later"
 
+
 ERROR_MAP: dict[str, type[YooMoneyError]] = {
     "illegal_param_type": IllegalParamType,
     "illegal_param_start_record": IllegalParamStartRecord,

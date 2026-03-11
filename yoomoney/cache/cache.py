@@ -33,9 +33,6 @@ def _dict_to_op(data: dict[str, Any]) -> Operation:
     return Operation.model_validate(data)
 
 
-
-
-
 class BaseCache(ABC):
     """Common interface for all cache backends."""
 
@@ -65,12 +62,9 @@ class BaseCache(ABC):
         return False
 
 
-
-
-
 class SQLiteCache(BaseCache):
     """Persistent cache backed by a local SQLite database."""
-    
+
     def __init__(self, path: str | Path = "yoomoney_cache.db") -> None:
         self.path = Path(path)
         self._conn = sqlite3.connect(str(self.path), check_same_thread=False)
@@ -96,7 +90,6 @@ class SQLiteCache(BaseCache):
             )
             self._conn.execute("CREATE INDEX IF NOT EXISTS idx_label    ON operations (label)")
             self._conn.execute("CREATE INDEX IF NOT EXISTS idx_datetime ON operations (datetime)")
-
 
     def save(self, operations: list[Operation]) -> None:
         now = datetime.now(tz=timezone.utc).strftime(_DT_FMT)
@@ -167,9 +160,6 @@ class SQLiteCache(BaseCache):
         self._conn.close()
 
 
-
-
-
 class JSONCache(BaseCache):
     """Lightweight cache backed by a JSON file.
 
@@ -198,7 +188,6 @@ class JSONCache(BaseCache):
             json.dumps(self._data, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-
 
     def save(self, operations: list[Operation]) -> None:
         store: dict[str, Any] = self._data.setdefault("operations", {})
