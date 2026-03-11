@@ -8,19 +8,17 @@ RECEIVER = "YOUR_WALLET_NUMBER"
 
 
 def on_payment_received(op: Operation) -> None:
-    print("✓ Payment confirmed!")
+    print("  Payment confirmed!")
     print(f"  Amount       : {op.amount} ₽")
     print(f"  Label        : {op.label}")
     print(f"  Operation ID : {op.operation_id}")
     print(f"  Date/Time    : {op.datetime}")
 
 
-# 1. Generate a unique label for this order
 checker = PaymentChecker(token=TOKEN, interval=5)
 label = PaymentChecker.make_label(prefix="order")
 print(f"Generated label: {label}")
 
-# 2. Build a payment link
 payment = Quickpay(
     receiver=RECEIVER,
     quickpay_form="shop",
@@ -32,7 +30,6 @@ payment = Quickpay(
 )
 print(f"Payment URL: {payment.base_url}")
 
-# 3. Wait up to 10 minutes for the payment to arrive
 paid = checker.watch(
     label=label,
     callback=on_payment_received,
