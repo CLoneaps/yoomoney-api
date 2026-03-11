@@ -39,7 +39,7 @@ app = FastAPI()
 
 
 def handle_payment(notification: Notification) -> None:
-    print(f"Payment received!")
+    print("Payment received!")
     print(f"  operation_id : {notification.operation_id}")
     print(f"  amount       : {notification.amount}")
     print(f"  label        : {notification.label}")
