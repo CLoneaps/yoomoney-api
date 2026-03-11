@@ -47,7 +47,7 @@ class Notification(BaseModel):
                 self.label,
             ]
         )
-        expected = hashlib.sha1(raw.encode(), usedforsecurity=False).hexdigest()  # noqa: S324
+        expected = hashlib.sha1(raw.encode(), usedforsecurity=False).hexdigest()
         return expected == self.sha1_hash
 
 
