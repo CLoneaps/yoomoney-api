@@ -14,7 +14,6 @@ from yoomoney.operation.operation import Operation
 
 logger = logging.getLogger(__name__)
 
-# Callback types
 SyncCallback = Callable[[Operation], None]
 AsyncCallback = Callable[[Operation], Coroutine[Any, Any, None]]
 

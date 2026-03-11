@@ -44,13 +44,13 @@ Features
 +-----------------------------+---------------------------------------------------------------+
 | `Operation details`_        | Get detailed information about a single operation.            |
 +-----------------------------+---------------------------------------------------------------+
-| `Quickpay forms`_           | Generate a payment form for any website or blog.              |
+| `Quickpay forms`_           | Generate a payment form for any website or bot.              |
 +-----------------------------+---------------------------------------------------------------+
 | `Payment checker`_          | Poll for incoming payments by label (sync & async).           |
 +-----------------------------+---------------------------------------------------------------+
 | `History cache`_            | Cache operation history locally (SQLite or JSON).             |
 +-----------------------------+---------------------------------------------------------------+
-| `Webhook notifications`_    | Receive payment notifications via Flask or FastAPI.           |
+| `Webhook notifications`_    | Receive payment notifications via FastAPI.                    |
 +-----------------------------+---------------------------------------------------------------+
 | `CLI`_                      | Command-line tool for balance, history, and payment watching. |
 +-----------------------------+---------------------------------------------------------------+
@@ -70,13 +70,11 @@ Or with `uv <https://docs.astral.sh/uv/>`_:
 
    uv add yoomoney
 
-**With optional webhook support:**
+**With webhook support:**
 
 .. code-block:: shell
 
-   pip install yoomoney[flask]    # Flask webhook
-   pip install yoomoney[fastapi]  # FastAPI webhook
-   pip install yoomoney[all]      # both
+   pip install yoomoney[fastapi]
 
 **From source**:
 
@@ -195,10 +193,8 @@ an incoming payment with the expected label (and optionally amount) arrives.
    TOKEN    = "YOUR_TOKEN"
    RECEIVER = "YOUR_WALLET"
 
-   # 1. Generate a unique label for this order
    label = PaymentChecker.make_label("order")
 
-   # 2. Build a payment link
    quickpay = Quickpay(
        receiver=RECEIVER,
        quickpay_form="shop",
@@ -209,9 +205,8 @@ an incoming payment with the expected label (and optionally amount) arrives.
    )
    print("Payment URL:", quickpay.base_url)
 
-   # 3. Wait up to 10 minutes for the payment
    def on_paid(op: Operation) -> None:
-       print(f"✓ Received {op.amount} ₽  label={op.label}")
+       print(f" Received {op.amount} ₽  label={op.label}")
 
    checker = PaymentChecker(token=TOKEN, interval=5)
    paid = checker.watch(label=label, callback=on_paid, amount=299.0, timeout=600)
@@ -228,7 +223,7 @@ Async version:
        checker = PaymentChecker(token="YOUR_TOKEN", interval=5)
 
        async def on_paid(op: Operation) -> None:
-           print(f"✓ Received {op.amount} ₽")
+           print(f"  Received {op.amount} ₽")
 
        await checker.watch_async(label="order_123", callback=on_paid, timeout=300)
 
@@ -249,103 +244,125 @@ Two backends: ``SQLiteCache`` (recommended for production) and ``JSONCache`` (sc
    cache  = SQLiteCache("payments.db")
 
    if cache.is_fresh(max_age=timedelta(minutes=5)):
-       operations = cache.load()              # served from disk
+       operations = cache.load()
    else:
        history = client.operation_history(records=50)
-       cache.save(history.operations)         # persist to disk
+       cache.save(history.operations)
        operations = history.operations
 
-   # Filter locally — zero API calls
    label_ops = cache.load(label="order_123")
    print(f"Operations for order_123: {len(label_ops)}")
 
 Webhook notifications
 ---------------------
 
-YooMoney can POST a notification to your server when a payment arrives.
+YooMoney can POST a notification to your server whenever a payment arrives.
+This library provides a ready-to-use FastAPI handler with built-in SHA-1
+signature verification.
 
-**Flask:**
-
-.. code-block:: shell
-
-   pip install yoomoney[flask]
-
-.. code-block:: python
-
-   from flask import Flask
-   from yoomoney.webhook import flask_webhook, Notification
-
-   app    = Flask(__name__)
-   SECRET = "YOUR_NOTIFICATION_SECRET"
-
-   def on_payment(n: Notification) -> None:
-       print(f"✓ {n.amount} ₽  op={n.operation_id}  label={n.label}")
-
-   @app.route("/", methods=["POST"])
-   def notify():
-       return flask_webhook(secret=SECRET, on_payment=on_payment)
-
-   if __name__ == "__main__":
-       app.run(port=5000)
-
-**FastAPI:**
+**Step 1 — Install dependencies**
 
 .. code-block:: shell
 
    pip install yoomoney[fastapi]
 
-.. code-block:: python
-
-   from fastapi import FastAPI, Request
-   from yoomoney.webhook import fastapi_webhook, Notification
-
-   app    = FastAPI()
-   SECRET = "YOUR_NOTIFICATION_SECRET"
-
-   def on_payment(n: Notification) -> None:
-       print(f"✓ {n.amount} ₽  op={n.operation_id}  label={n.label}")
-
-   @app.post("/")
-   async def notify(request: Request):
-       return await fastapi_webhook(request=request, secret=SECRET, on_payment=on_payment)
-
-The ``Notification`` model validates the SHA-1 signature automatically.
-Pass ``verify=False`` to skip signature checking during local development.
-
-**Setting up notifications in YooMoney**
+**Step 2 — Get your notification secret**
 
 1. Go to `yoomoney.ru/transfer/myservices/http-notification <https://yoomoney.ru/transfer/myservices/http-notification>`_.
-2. Enter your server URL in the **"Куда отправлять (URL сайта)"** field.
-3. Copy the value from **"Секрет для проверки подлинности"** — use it as ``SECRET`` in your code.
-4. Check **"Отправлять HTTP-уведомления"** and save.
+2. Copy the value from **«Секрет для проверки подлинности»** — this is your ``SECRET``.
+3. Enter your server URL in **«Куда отправлять (URL сайта)»**.
+4. Check **«Отправлять HTTP-уведомления»** and save.
 
-**Testing without a real payment**
+**Step 3 — Create the server**
 
-For local development you can expose your server via
-`ngrok <https://ngrok.com>`_ and use the built-in test button:
+.. code-block:: python
+
+   import os
+   from fastapi import FastAPI, Request
+   from yoomoney.webhook import Notification, fastapi_webhook
+
+   SECRET = os.environ.get("YOOMONEY_SECRET", "YOUR_NOTIFICATION_SECRET")
+
+   app = FastAPI()
+
+   def on_payment(notification: Notification) -> None:
+       print(f" Payment received!")
+       print(f"  amount       : {notification.amount} ₽")
+       print(f"  operation_id : {notification.operation_id}")
+       print(f"  label        : {notification.label}")
+       print(f"  sender       : {notification.sender}")
+
+   @app.post("/yoomoney/notify")
+   async def notify(request: Request):
+       return await fastapi_webhook(
+           request=request,
+           secret=SECRET,
+           on_payment=on_payment,
+       )
+
+**Step 4 — Run the server**
 
 .. code-block:: shell
 
-   # 1. Install and start your webhook server
-   pip install flask yoomoney[flask]
-   python examples/webhook_server.py
+   uvicorn myapp:app --host 0.0.0.0 --port 8000
 
-   # 2. In a second terminal — expose it to the internet
-   ngrok http 5000
+For production with multiple workers:
 
-   # 3. Copy the public URL from ngrok (e.g. https://abc123.ngrok-free.app)
-   #    Paste it into the YooMoney notification settings page
-   #    Then click "Протестировать" — you should see the payment in your terminal
+.. code-block:: shell
 
-Expected terminal output after clicking **"Протестировать"**:
+   uvicorn myapp:app --host 0.0.0.0 --port 8000 --workers 4
+
+**Testing locally with ngrok**
+
+YooMoney requires a public HTTPS URL to send notifications.
+During local development you can get one for free using
+`ngrok <https://ngrok.com>`_.
+
+1. Sign up at `ngrok.com <https://ngrok.com>`_ and download the utility.
+
+2. Authenticate (one-time setup):
+
+.. code-block:: shell
+
+   ngrok config add-authtoken YOUR_NGROK_TOKEN
+
+3. In the first terminal, start your server:
+
+.. code-block:: shell
+
+   uvicorn myapp:app --host 0.0.0.0 --port 8000
+
+4. In a second terminal, start ngrok:
+
+.. code-block:: shell
+
+   ngrok http 8000
+
+5. Find the ``Forwarding`` line in ngrok output — this is your public URL:
 
 .. code-block:: text
 
-   ✓ Платёж получен!
-     Сумма:        200.39 ₽
-     Label:
-     Operation ID: test-notification
-     Отправитель:  41001000040
+   Forwarding  https://abc123.ngrok-free.app -> http://localhost:8000
+
+6. Copy that URL and paste it into the YooMoney notification settings,
+   appending the path: ``https://abc123.ngrok-free.app/yoomoney/notify``
+
+7. Click **«Протестировать»** — you should see the notification in your terminal:
+
+.. code-block:: text
+
+     Payment received!
+     amount       : 200.39 ₽
+     operation_id : test-notification
+     label        :
+     sender       : 41001000040
+
+Pass ``verify=False`` to skip signature checking during local development:
+
+.. code-block:: python
+
+   return await fastapi_webhook(request=request, secret=SECRET,
+                                on_payment=on_payment, verify=False)
 
 CLI
 ---

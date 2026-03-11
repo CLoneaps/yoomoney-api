@@ -1,30 +1,44 @@
-"""Example: receive YooMoney payment notifications via webhook.
+"""FastAPI webhook server for YooMoney payment notifications.
 
-Flask version
--------------
-Run with::
+Installation
+------------
+    pip install yoomoney[fastapi]
 
-    pip install flask
-    python examples/webhook_server.py
-
-FastAPI version
----------------
-Run with::
+    or manually:
 
     pip install fastapi uvicorn python-multipart
-    uvicorn examples.webhook_server:fastapi_app
 
-Then configure your YooMoney notification URL to point to
-http://your-server/yoomoney/notify
+Setup
+-----
+1. Get your notification secret from YooMoney:
+   https://yoomoney.ru/transfer/myservices/http-notification
+
+2. Set your notification URL in YooMoney settings:
+   https://your-domain.com/yoomoney/notify
+
+3. Set environment variable:
+   export YOOMONEY_SECRET=your_secret_here
+
+Running
+-------
+    uvicorn examples.webhook_server:app --host 0.0.0.0 --port 8000
+
+For production with multiple workers:
+    uvicorn examples.webhook_server:app --host 0.0.0.0 --port 8000 --workers 4
 """
 
-from yoomoney.webhook import Notification
+import os
 
-SECRET = "YOUR_NOTIFICATION_SECRET"
+from fastapi import FastAPI, Request
+
+from yoomoney.webhook import Notification, fastapi_webhook
+
+SECRET = os.environ.get("YOOMONEY_SECRET", "YOUR_NOTIFICATION_SECRET")
+
+app = FastAPI()
 
 
 def handle_payment(notification: Notification) -> None:
-    """Called when a valid payment notification arrives."""
     print("Payment received!")
     print(f"  operation_id : {notification.operation_id}")
     print(f"  amount       : {notification.amount}")
@@ -32,43 +46,10 @@ def handle_payment(notification: Notification) -> None:
     print(f"  sender       : {notification.sender}")
 
 
-# Flask
-try:
-    from flask import Flask
-
-    from yoomoney.webhook import flask_webhook
-
-    flask_app = Flask(__name__)
-
-    @flask_app.route("/yoomoney/notify", methods=["POST"])
-    def flask_notify():  # type: ignore[return]
-        return flask_webhook(secret=SECRET, on_payment=handle_payment)
-
-except ImportError:
-    flask_app = None  # type: ignore[assignment]
-    print("Flask not installed — Flask example skipped")
-
-# FastAPI
-try:
-    from fastapi import FastAPI, Request
-
-    from yoomoney.webhook import fastapi_webhook
-
-    fastapi_app = FastAPI()
-
-    @fastapi_app.post("/yoomoney/notify")
-    async def fastapi_notify(request: Request):
-        return await fastapi_webhook(
-            request=request,
-            secret=SECRET,
-            on_payment=handle_payment,
-        )
-
-except ImportError:
-    fastapi_app = None  # type: ignore[assignment]
-    print("FastAPI not installed — FastAPI example skipped")
-
-
-if __name__ == "__main__":
-    if flask_app:
-        flask_app.run(port=8080, debug=True)
+@app.post("/yoomoney/notify")
+async def notify(request: Request):
+    return await fastapi_webhook(
+        request=request,
+        secret=SECRET,
+        on_payment=handle_payment,
+    )

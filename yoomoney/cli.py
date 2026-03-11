@@ -2,22 +2,16 @@
 
 Usage examples::
 
-    # Show account info
     yoomoney --token TOKEN account
 
-    # Show last 10 operations
     yoomoney --token TOKEN history --records 10
 
-    # Filter by label
     yoomoney --token TOKEN history --label order_42
 
-    # Check a specific operation
     yoomoney --token TOKEN details --id <operation_id>
 
-    # Watch for a payment (polling)
     yoomoney --token TOKEN watch --label order_42 --amount 500 --timeout 300
 
-    # Check balance only
     yoomoney --token TOKEN balance
 
 Token can also be set via YOOMONEY_TOKEN environment variable
@@ -139,7 +133,7 @@ def cmd_watch(args: argparse.Namespace) -> None:
         from yoomoney.operation.operation import Operation
 
         if isinstance(op, Operation):
-            print("\n✓ Payment received!")
+            print("\nPayment received!")
             print(f"  operation_id : {op.operation_id}")
             print(f"  amount       : {op.amount}")
             print(f"  label        : {op.label}")
@@ -172,13 +166,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub = parser.add_subparsers(dest="command", required=True)
 
-    # account
     sub.add_parser("account", help="Show account info")
 
-    # balance
     sub.add_parser("balance", help="Print balance only")
 
-    # history
     hist = sub.add_parser("history", help="Show operation history")
     hist.add_argument("--label", help="Filter by label")
     hist.add_argument("--type", choices=["payment", "deposition"], help="Filter by type")
@@ -186,11 +177,9 @@ def build_parser() -> argparse.ArgumentParser:
     hist.add_argument("--from-date", dest="from_date", metavar="ISO", help="Start date (ISO 8601)")
     hist.add_argument("--till-date", dest="till_date", metavar="ISO", help="End date (ISO 8601)")
 
-    # details
     det = sub.add_parser("details", help="Show operation details")
     det.add_argument("--id", required=True, metavar="OPERATION_ID")
 
-    # watch
     watch = sub.add_parser("watch", help="Poll until payment with label arrives")
     watch.add_argument("--label", required=True, help="Label to watch for")
     watch.add_argument("--amount", type=float, default=None, help="Minimum expected amount")
@@ -199,7 +188,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     watch.add_argument("--interval", type=float, default=10, help="Polling interval (default 10s)")
 
-    # make-label
     ml = sub.add_parser("make-label", help="Generate a unique payment label")
     ml.add_argument("--prefix", default="order", help="Label prefix (default: order)")
 

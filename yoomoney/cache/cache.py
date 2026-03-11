@@ -33,11 +33,6 @@ def _dict_to_op(data: dict[str, Any]) -> Operation:
     return Operation.model_validate(data)
 
 
-# ---------------------------------------------------------------------------
-# Abstract base
-# ---------------------------------------------------------------------------
-
-
 class BaseCache(ABC):
     """Common interface for all cache backends."""
 
@@ -67,20 +62,8 @@ class BaseCache(ABC):
         return False
 
 
-# ---------------------------------------------------------------------------
-# SQLite backend
-# ---------------------------------------------------------------------------
-
-
 class SQLiteCache(BaseCache):
-    """Persistent cache backed by a local SQLite database.
-
-    Parameters
-    ----------
-    path:
-        Path to the ``.db`` file. Defaults to ``yoomoney_cache.db``
-        in the current working directory.
-    """
+    """Persistent cache backed by a local SQLite database."""
 
     def __init__(self, path: str | Path = "yoomoney_cache.db") -> None:
         self.path = Path(path)
@@ -107,8 +90,6 @@ class SQLiteCache(BaseCache):
             )
             self._conn.execute("CREATE INDEX IF NOT EXISTS idx_label    ON operations (label)")
             self._conn.execute("CREATE INDEX IF NOT EXISTS idx_datetime ON operations (datetime)")
-
-    # -- BaseCache ------------------------------------------------------------
 
     def save(self, operations: list[Operation]) -> None:
         now = datetime.now(tz=timezone.utc).strftime(_DT_FMT)
@@ -179,11 +160,6 @@ class SQLiteCache(BaseCache):
         self._conn.close()
 
 
-# ---------------------------------------------------------------------------
-# JSON backend
-# ---------------------------------------------------------------------------
-
-
 class JSONCache(BaseCache):
     """Lightweight cache backed by a JSON file.
 
@@ -212,8 +188,6 @@ class JSONCache(BaseCache):
             json.dumps(self._data, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-
-    # -- BaseCache ------------------------------------------------------------
 
     def save(self, operations: list[Operation]) -> None:
         store: dict[str, Any] = self._data.setdefault("operations", {})
