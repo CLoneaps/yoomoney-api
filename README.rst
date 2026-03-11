@@ -48,11 +48,7 @@ Features
 +-----------------------------+---------------------------------------------------------------+
 | `Payment checker`_          | Poll for incoming payments by label (sync & async).           |
 +-----------------------------+---------------------------------------------------------------+
-| `History cache`_            | Cache operation history locally (SQLite or JSON).             |
-+-----------------------------+---------------------------------------------------------------+
 | `Webhook notifications`_    | Receive payment notifications via FastAPI.                    |
-+-----------------------------+---------------------------------------------------------------+
-| `CLI`_                      | Command-line tool for balance, history, and payment watching. |
 +-----------------------------+---------------------------------------------------------------+
 
 Installation
@@ -74,7 +70,7 @@ Or with `uv <https://docs.astral.sh/uv/>`_:
 
 .. code-block:: shell
 
-   pip install yoomoney[fastapi]
+   pip install yoomoney fastapi
 
 **From source**:
 
@@ -229,30 +225,6 @@ Async version:
 
    asyncio.run(main())
 
-History cache
--------------
-
-Cache operation history locally to reduce the number of API calls.
-Two backends: ``SQLiteCache`` (recommended for production) and ``JSONCache`` (scripts).
-
-.. code-block:: python
-
-   from datetime import timedelta
-   from yoomoney import Client, SQLiteCache
-
-   client = Client("YOUR_TOKEN")
-   cache  = SQLiteCache("payments.db")
-
-   if cache.is_fresh(max_age=timedelta(minutes=5)):
-       operations = cache.load()
-   else:
-       history = client.operation_history(records=50)
-       cache.save(history.operations)
-       operations = history.operations
-
-   label_ops = cache.load(label="order_123")
-   print(f"Operations for order_123: {len(label_ops)}")
-
 Webhook notifications
 ---------------------
 
@@ -264,7 +236,7 @@ signature verification.
 
 .. code-block:: shell
 
-   pip install yoomoney[fastapi]
+   pip install yoomoney fastapi
 
 **Step 2 — Get your notification secret**
 
@@ -363,27 +335,6 @@ Pass ``verify=False`` to skip signature checking during local development:
 
    return await fastapi_webhook(request=request, secret=SECRET,
                                 on_payment=on_payment, verify=False)
-
-CLI
----
-
-After installation a ``yoomoney`` command becomes available.
-Set the token once via environment variable:
-
-.. code-block:: shell
-
-   export YOOMONEY_TOKEN="YOUR_TOKEN"   # Linux / macOS
-   set    YOOMONEY_TOKEN=YOUR_TOKEN     # Windows
-
-.. code-block:: shell
-
-   yoomoney account                              # account info
-   yoomoney balance                              # balance only
-   yoomoney history --records 10                 # last 10 operations
-   yoomoney history --label order_42             # filter by label
-   yoomoney details --id 670244335488002312      # operation details
-   yoomoney watch --label order_42 --amount 500  # wait for payment
-   yoomoney make-label --prefix order            # generate unique label
 
 Async client
 ============
