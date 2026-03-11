@@ -50,12 +50,7 @@ YooMoney API
 +-------------------------------------+-----------------------------------------------------------+
 | `Проверка платежей`_                | Polling входящих платежей по label (sync и async).         |
 +-------------------------------------+-----------------------------------------------------------+
-| `Кэш истории`_                      | Локальное кэширование истории операций (SQLite или JSON).  |
-+-------------------------------------+-----------------------------------------------------------+
 | `Webhook-уведомления`_              | Приём уведомлений о платежах через FastAPI.                |
-+-------------------------------------+-----------------------------------------------------------+
-| `CLI`_                              | Консольный инструмент для баланса, истории и ожидания      |
-|                                     | платежей.                                                  |
 +-------------------------------------+-----------------------------------------------------------+
 
 Установка
@@ -77,7 +72,7 @@ YooMoney API
 
 .. code-block:: shell
 
-   pip install yoomoney[fastapi]
+   pip install yoomoney fastapi
 
 **Из исходников**:
 
@@ -234,30 +229,6 @@ YooMoney API
 
    asyncio.run(main())
 
-Кэш истории
------------
-
-Кэширование истории операций локально — чтобы не дёргать API при каждом запросе.
-Два бэкенда: ``SQLiteCache`` (рекомендуется) и ``JSONCache`` (для скриптов).
-
-.. code-block:: python
-
-   from datetime import timedelta
-   from yoomoney import Client, SQLiteCache
-
-   client = Client("YOUR_TOKEN")
-   cache  = SQLiteCache("payments.db")
-
-   if cache.is_fresh(max_age=timedelta(minutes=5)):
-       operations = cache.load()
-   else:
-       history = client.operation_history(records=50)
-       cache.save(history.operations)
-       operations = history.operations
-
-   label_ops = cache.load(label="order_123")
-   print(f"Операций для order_123: {len(label_ops)}")
-
 Webhook-уведомления
 -------------------
 
@@ -269,7 +240,7 @@ SHA-1 подписи.
 
 .. code-block:: shell
 
-   pip install yoomoney[fastapi]
+   pip install yoomoney fastapi
 
 **Шаг 2 — Получите секрет в YooMoney**
 
@@ -369,27 +340,6 @@ YooMoney требует публичный HTTPS-адрес для отправ�
 
    return await fastapi_webhook(request=request, secret=SECRET,
                                 on_payment=on_payment, verify=False)
-
-CLI
----
-
-После установки в терминале появляется команда ``yoomoney``.
-Токен удобно задать один раз через переменную окружения:
-
-.. code-block:: shell
-
-   export YOOMONEY_TOKEN="YOUR_TOKEN"   # Linux / macOS
-   set    YOOMONEY_TOKEN=YOUR_TOKEN     # Windows
-
-.. code-block:: shell
-
-   yoomoney account                              # информация об аккаунте
-   yoomoney balance                              # только баланс
-   yoomoney history --records 10                 # последние 10 операций
-   yoomoney history --label order_42             # фильтр по label
-   yoomoney details --id 670244335488002312      # детали операции
-   yoomoney watch --label order_42 --amount 500  # ждать платёж
-   yoomoney make-label --prefix order            # сгенерировать label
 
 Асинхронный клиент
 ==================
